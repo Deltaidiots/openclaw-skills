@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Suggest next workouts based on recent Strava activities.
+# This is intentionally heuristic and conservative.
+#
+# Output is plain text suggestions + an optional calendar-block proposal list.
+#
+# Usage:
+#   strava-suggest [--days N]
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DAYS=7
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --days) DAYS="$2"; shift 2;;
+    -h|--help) sed -n '1,80p' "$0"; exit 0;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
+  esac
+done
+
+AFTER=$(date -d "${DAYS} days ago" +%s)
+JSON="$($DIR/strava-activities --after "$AFTER" --per-page 50)"
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required for strava-suggest (sudo apt-get install jq)." >&2
+  exit 2
+fi
+
+# Extract last activity and simple counts.
+last_sport=$(printf '%s' "$JSON" | jq -r '.[0].sport_type // "unknown"')
+last_date=$(printf '%s' "$JSON" | jq -r '.[0].start_date_local // ""')
+count_squash=$(printf '%s' "$JSON" | jq '[.[] | select(.sport_type=="Squash")] | length')
+count_climb=$(printf '%s' "$JSON" | jq '[.[] | select(.sport_type=="RockClimbing" or .sport_type=="Bouldering")] | length')
+count_run=$(printf '%s' "$JSON" | jq '[.[] | select(.sport_type=="Run")] | length')
+
+cat <<EOF
+Recent training (last ${DAYS} days):
+- Squash: ${count_squash}
+- Climbing/Bouldering: ${count_climb}
+- Run: ${count_run}
+- Last activity: ${last_sport} @ ${last_date}
+
+Suggestions (pick 1–2):
+EOF
+
+# Very basic logic
+if [ "$last_sport" = "Squash" ]; then
+  echo "- Next: easy strength + mobility OR bouldering technique session (lower impact than another squash match)."
+  echo "- If you do cardio: zone-2 run/bike 30–45 min."
+else
+  echo "- Next: squash or another sport you enjoy (keep it consistent)."
+fi
+
+echo
+cat <<'EOF'
+Calendar blocks (optional):
+- Tue/Thu 19:00–20:00: Squash
+- Sat 11:00–13:00: Bouldering
+EOF

@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Propose (and optionally create) calendar blocks for workouts.
+# Requires gogcli for calendar operations.
+#
+# By default this prints what it *would* do. Use --apply to create.
+#
+# Usage:
+#   strava-calendar-propose --calendar <calendarId> [--apply]
+#
+# Example:
+#   strava-calendar-propose --calendar primary
+
+APPLY=0
+CALENDAR=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --calendar) CALENDAR="$2"; shift 2;;
+    --apply) APPLY=1; shift 1;;
+    -h|--help) sed -n '1,120p' "$0"; exit 0;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
+  esac
+done
+
+if [ -z "$CALENDAR" ]; then
+  echo "Missing --calendar <calendarId>" >&2
+  exit 2
+fi
+
+if ! command -v gog >/dev/null 2>&1; then
+  echo "Missing 'gog' (gogcli). Install and auth gog calendar first." >&2
+  exit 2
+fi
+
+# Default proposal: next Tue/Thu 19:00–20:00 (Squash), Sat 11:00–13:00 (Bouldering)
+# This is intentionally simple. Users can edit the events after creation.
+
+mkiso() {
+  # GNU date expected (Linux). If on macOS, adjust.
+  date -d "$1" -Iseconds
+}
+
+# Next occurrences
+TUE=$(date -d 'next tue 19:00' '+%Y-%m-%d %H:%M')
+THU=$(date -d 'next thu 19:00' '+%Y-%m-%d %H:%M')
+SAT=$(date -d 'next sat 11:00' '+%Y-%m-%d %H:%M')
+
+TUE_FROM=$(mkiso "$TUE")
+TUE_TO=$(mkiso "$(date -d "$TUE +1 hour" '+%Y-%m-%d %H:%M')")
+THU_FROM=$(mkiso "$THU")
+THU_TO=$(mkiso "$(date -d "$THU +1 hour" '+%Y-%m-%d %H:%M')")
+SAT_FROM=$(mkiso "$SAT")
+SAT_TO=$(mkiso "$(date -d "$SAT +2 hours" '+%Y-%m-%d %H:%M')")
+
+propose() {
+  local summary="$1" from="$2" to="$3"
+  echo "- $summary: $from → $to"
+  if [ "$APPLY" -eq 1 ]; then
+    gog calendar create "$CALENDAR" --summary "$summary" --from "$from" --to "$to" >/dev/null
+  fi
+}
+
+echo "Proposed workout blocks:" 
+propose "Squash" "$TUE_FROM" "$TUE_TO"
+propose "Squash" "$THU_FROM" "$THU_TO"
+propose "Bouldering" "$SAT_FROM" "$SAT_TO"
+
+echo
+if [ "$APPLY" -eq 1 ]; then
+  echo "Created events in calendar: $CALENDAR"
+else
+  echo "Dry run. Re-run with --apply to create events."
+fi

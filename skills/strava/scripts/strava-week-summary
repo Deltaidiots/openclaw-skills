@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Summarize recent Strava activities (default: last 7 days).
+# Requires: bash, curl. Optional: jq for nicer output.
+#
+# Usage:
+#   strava-week-summary [--days N] [--per-page N]
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+DAYS=7
+PER_PAGE=50
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --days) DAYS="$2"; shift 2;;
+    --per-page) PER_PAGE="$2"; shift 2;;
+    -h|--help) sed -n '1,60p' "$0"; exit 0;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
+  esac
+done
+
+AFTER=$(date -d "${DAYS} days ago" +%s)
+JSON="$($DIR/strava-activities --after "$AFTER" --per-page "$PER_PAGE")"
+
+if command -v jq >/dev/null 2>&1; then
+  printf '%s\n' "$JSON" | jq -r --arg days "$DAYS" '
+    def fmt(n): (n|tostring);
+    def km(m): (m/1000);
+    def mins(s): (s/60);
+    ("Last \($days) days — activities: \(length)"),
+    ( .[] | "\(.start_date_local)\t\(.sport_type)\t\(.name)\t\( (km(.distance))|round )km\t\( (mins(.moving_time))|round )min\tavgHR=\(.average_heartrate // "-")" )
+  '
+else
+  echo "Last ${DAYS} days — raw JSON (install jq for a nicer summary):" >&2
+  printf '%s\n' "$JSON"
+fi

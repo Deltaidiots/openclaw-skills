@@ -82,11 +82,20 @@ Common causes:
 
 ## Scripts
 
-- `scripts/strava-auth-url` — prints an authorize URL.
+Core (A: fetch + summarize):
+
+- `scripts/strava-auth-url` — prints an authorize URL (`activity:read_all`).
 - `scripts/strava-exchange-code` — exchanges a `code` for tokens (prints JSON).
 - `scripts/strava-access-token` — exchanges refresh token for access token.
-- `scripts/strava-activities` — fetches recent activities.
-- `scripts/strava-summary` — summarizes the last N activities (plain JSON in/out).
+- `scripts/strava-activities` — fetches recent activities (`--per-page`, `--after`, `--before`).
+- `scripts/strava-week-summary` — last N days summary (uses `jq` if installed).
+- `scripts/strava-summary` — minimal no-jq extractor.
+
+Calendar assistant (B: propose blocks):
+
+- `scripts/strava-suggest` — heuristic suggestions from recent training (requires `jq`).
+- `scripts/strava-calendar-propose` — prints (and optionally creates) workout blocks via `gog calendar`.
+  - Defaults to **dry-run**. Use `--apply` to create events.
 
 ## References
 
