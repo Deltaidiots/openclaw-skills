@@ -1,11 +1,12 @@
 ---
 name: strava
 description: "Fetch Strava activities via OAuth (refresh token), summarize training, and troubleshoot scopes (activity:read_all)."
+homepage: https://www.strava.com/settings/api
 metadata:
   {
     "openclaw": {
       "emoji": "🏃",
-      "requires": { "bins": ["curl"] }
+      "requires": { "bins": ["bash", "curl"] }
     }
   }
 ---
