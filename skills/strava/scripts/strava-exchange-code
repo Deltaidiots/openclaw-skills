@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Exchange an OAuth code for tokens.
+# Reads STRAVA_CLIENT_ID/STRAVA_CLIENT_SECRET from env file.
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$DIR/strava-lib.sh"
+strava_load_env
+
+code="${1:-}"
+if [ -z "$code" ]; then
+  read -r -p "Paste code: " code
+fi
+
+curl -s -X POST https://www.strava.com/oauth/token \
+  -d client_id="$STRAVA_CLIENT_ID" \
+  -d client_secret="$STRAVA_CLIENT_SECRET" \
+  -d code="$code" \
+  -d grant_type=authorization_code
+
+echo

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Very small summarizer: prints a TSV-like list without jq.
+# Use this as a starting point; most people will pipe JSON into jq.
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+json="$($DIR/strava-activities --per-page 10)"
+
+# crude extraction: name + sport_type + start_date_local
+# shellcheck disable=SC2001
+printf '%s' "$json" | \
+  sed -n 's/.*"name":"\([^"]*\)".*"sport_type":"\([^"]*\)".*"start_date_local":"\([^"]*\)".*/\3\t\2\t\1/p'

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fetch recent Strava activities.
+# Flags:
+#   --per-page N   (default 10)
+#   --after TS     (unix seconds)
+#   --before TS    (unix seconds)
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$DIR/strava-lib.sh"
+strava_load_env
+
+after=""
+before=""
+per_page=10
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --per-page) per_page="$2"; shift 2;;
+    --after) after="$2"; shift 2;;
+    --before) before="$2"; shift 2;;
+    -h|--help)
+      sed -n '1,40p' "$0"; exit 0;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
+  esac
+done
+
+token="$(strava_access_token)"
+url="https://www.strava.com/api/v3/athlete/activities?per_page=${per_page}"
+[ -n "$after" ] && url+="&after=${after}"
+[ -n "$before" ] && url+="&before=${before}"
+
+curl -s -H "Authorization: Bearer $token" "$url"

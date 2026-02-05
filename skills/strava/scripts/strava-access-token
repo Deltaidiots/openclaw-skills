@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Print a short-lived access token from refresh token.
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$DIR/strava-lib.sh"
+strava_load_env
+
+strava_access_token
